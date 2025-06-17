@@ -108,6 +108,10 @@ hash -r
 # -------------------------------------------------------
 exec 3>/dev/null
 
+# Set up fd 4 for non-busy waiting for signals
+# --------------------------------------------
+exec 4<> <(:)
+
 # ------------------------------------------------------------------------------
 # Options description:
 #   -o pipefail: exit on error in any part of pipeline
@@ -275,8 +279,7 @@ pin()
     # Wait on SIGTERM to reset pins
     # -----------------------------
     debug "Waiting to reset pins"
-    sleep infinity &
-    wait "$!"
+    read <&4
 }
 
 

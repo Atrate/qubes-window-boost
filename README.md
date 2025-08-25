@@ -30,9 +30,7 @@ make the script exit.
 
 ## Limitations
 
-1. The script only supports the `i3` window manager.
-2. If you have more specific pins defined for a VM (such as "vCPU 1 to CPUs 2, 3 and 4, vCPU 2 to CPUs 4, 6, 7), the script will probably not work well.
-3. `dom0` does not get its pinnings modified. This is by design, but a commandline switch to change that behavior could be implemented.
+1. If you have more specific pins defined for a VM (such as "vCPU 1 to CPUs 2, 3 and 4, vCPU 2 to CPUs 4, 6, 7), the script will probably not work well.
 
 PRs to fix those issues are welcome :).
 

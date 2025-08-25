@@ -28,7 +28,7 @@
 # information on how to set up the prerequisite core pinning required for this
 # script to run well.
 # --------------------
-# Version: 0.5.0
+# Version: 0.9.0
 # --------------------
 # Exit code listing:
 #   0: All good
@@ -87,9 +87,10 @@ UTILS=(
     'stdbuf'
     'tee'
     'true'
-    'jq'
     'stdbuf'
     'xl'
+    'xargs'
+    'xprop'
 )
 
 # Unset all commands used in the script - prevents exported functions
@@ -135,9 +136,23 @@ export LANG=C
 
 # Globals
 # -------
+
+# Whether to print additional debug info
+# --------------------------------------
 readonly VERBOSE="false"
+
+# The script will skip pinning cores for qubes pinned to IGNORE_PIN cores
+# -----------------------------------------------------------------------
 readonly IGNORE_PIN="all"
+
+# Which cores to pin focused qubes to. Can be set to e.g. a range of p-cores
+# --------------------------------------------------------------------------
 readonly TARGET_CORES="all"
+
+# Whether to pin/unpin dom0's cores as well
+# -----------------------------------------
+readonly PIN_DOM0="false"
+
 
 # Generic error handling
 # ----------------------
@@ -224,22 +239,17 @@ check_environment()
 
 
 # Get window focused/window closed events. Format: for window focus changes,
-# output is just the name of the VM that got focus. For window close events,
-# output is one line of "window_closed" and the VM's name on the next line.
-# Could be handled more elegantly, but I don't think many people would name
-# their VMV "window_closed". Could be adapted to work with any other WM/DE.
-# --------------------------------------------------------------------------
+# output is just the name of the VM that got focus. Domain-0 = dom0. Special
+# thanks to Qubes Forum user Talkabout for providing the xprop method.
+# ---------------------------------------------------------------------------
 get_focused_domid()
 {
-    i3-msg -t subscribe -m '["window"]' | jq -r --unbuffered '
-  if .change == "focus" then
-    (.container.window_properties.class | split(":")[0])
-  elif .change == "close" then
-    "window_closed", (.container.window_properties.class | split(":")[0])
-  else
-    empty
-  end
-'
+    xprop -spy -root -notype _NET_ACTIVE_WINDOW \
+        | stdbuf -oL cut -d ' ' -f 5 \
+        | xargs -n 1 xprop -notype _QUBES_VMNAME -id 2>&1 \
+        | stdbuf -oL sed -n -r -e 's/[^"]+"([^"]+)"[^"]*/\1/gp' \
+                               -e 's/[^0]+0x0.$/Domain-0/gp' \
+                               -e 's/_QUBES_VMNAME:\s+not\s+found./Domain-0/gp'
 }
 
 
@@ -360,31 +370,12 @@ main()
     # Variables
     # ---------
     local old_domid=""
-    local close_event="0"
     declare -A jobs_list
 
     # Read window focus/close events
     # ------------------------------
     while read -r domid
     do
-        # Close event: reset pinning for closed domain
-        # --------------------------------------------
-        if [ "$close_event" -eq 1 ]
-        then
-            reset_pin "$domid"
-            close_event=0
-            old_domid=""
-            continue
-        fi
-
-        # Close event: prepare for reset
-        # ------------------------------
-        if [ "$domid" = "window_closed" ]
-        then
-            close_event=1
-            continue
-        fi
-
         # Focus change event
         # ------------------
         debug "Detected focus change: $domid"
@@ -403,17 +394,24 @@ main()
             | uniq \
             | grep -E '^[a-zA-Z0-9_\s,-]+$')"
         then
-            # The following 2 non-comment lines can be moved out of this loop to
-            # make focusing dom0 windows reset pinning. NB: has not been tested.
-            # ------------------------------------------------------------------
-
             # Reset pinning for previous domain
             # ---------------------------------
-            [ -z "$old_domid" ] || reset_pin "$old_domid"
+            if [ "$old_domid" != "Domain-0" ] || [ "$PIN_DOM0" = "true" ]
+            then
+                [ -n "$old_domid" ] && reset_pin "$old_domid"
+            fi
 
             # Save old somain ID to reset it in the future
             # --------------------------------------------
             old_domid="$domid"
+
+            # Skip iteration if focused domain = dom0 and PIN_DOM0 != true
+            # ------------------------------------------------------------
+            if [ "$domid" = "Domain-0" ] && [ "$PIN_DOM0" != "true" ]
+            then
+                debug "Skipping pinning cores for dom0 as \$PIN_DOM0 != \"true\""
+                continue
+            fi
 
             if [ "$old_cpus" = "$IGNORE_PIN" ]
             then

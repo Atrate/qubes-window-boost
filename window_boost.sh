@@ -363,10 +363,6 @@ main()
     # -------------------------
     trap reset_all_pins USR1
 
-    # Don't fall over on writing to closed pipe (on terminal detach)
-    # --------------------------------------------------------------
-    trap '' SIGPIPE
-
     # Variables
     # ---------
     local old_domid=""

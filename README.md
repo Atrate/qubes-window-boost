@@ -40,6 +40,10 @@ watch -d -n 0.5 "xl vcpu-list | tr -s ' ' | cut -d' ' -f 1,7- | uniq | column -t
 
 PRs to fix those issues are welcome :).
 
+## Other Utilities
+
+See [the qubes-utils repo](https://github.com/Atrate/qubes-utils) for links to other utilities I've written for Qubes.
+
 ## License
 This project is licensed under the [AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.html).
 

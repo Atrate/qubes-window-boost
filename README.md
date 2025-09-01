@@ -19,7 +19,7 @@ make the script exit.
 
 ## Usage
 
-1. Set up automatic CPU pinning based on information in [this Qubes forum thread](https://forum.qubes-os.org/t/cpu-pinning-alder-lake/17949)
+1. Set up automatic CPU pinning via https://github.com/Atrate/Qubes-CPU-Pinning or based on information in [this Qubes forum thread](https://forum.qubes-os.org/t/cpu-pinning-alder-lake/17949)
 2. Decide on the cores you want to pin focused windows' VMs to (`TARGET_CORES` variable)
 3. Decide on the VMs you want to ignore based on their current pins (`IGNORE_PIN` variable)
 4. Download `window_boost.sh` and move it to `dom0` (e.g. to `/usr/local/bin/window_boost.sh`
